@@ -177,14 +177,26 @@ int EventLoop::setupSocket(std::shared_ptr<sdbusplus::asio::connection>& bus,
                        "ERROR", strerror(errno));
             return EXIT_FAILURE;
         }
+#ifdef ENABLE_RMCP_RMCPP_IN_IPV6
         udpSocket = std::make_shared<boost::asio::ip::udp::socket>(
             *io, boost::asio::ip::udp::v6(), openFd);
+#else
+       udpSocket = std::make_shared<boost::asio::ip::udp::socket>(*io, boost::asio::ip::udp::v4());
+       boost::asio::ip::udp::endpoint ep(boost::asio::ip::udp::v4(), reqPort);
+       udpSocket->set_option(boost::asio::ip::udp::socket::reuse_address(true));
+       udpSocket->bind(ep);
+#endif
+
     }
     else
     {
         // asio does not natively offer a way to bind to an interface
         // so it must be done in steps
+#ifdef ENABLE_RMCP_RMCPP_IN_IPV6
         boost::asio::ip::udp::endpoint ep(boost::asio::ip::udp::v6(), reqPort);
+#else
+        boost::asio::ip::udp::endpoint ep(boost::asio::ip::udp::v4(), reqPort);
+#endif
         udpSocket = std::make_shared<boost::asio::ip::udp::socket>(*io);
         udpSocket->open(ep.protocol());
         // bind
