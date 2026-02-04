@@ -9,6 +9,7 @@
 #include "sessions_manager.hpp"
 #include "socket_channel.hpp"
 #include "sol_module.hpp"
+#include "ipheader.hpp"
 
 #include <assert.h>
 #include <dirent.h>
@@ -35,6 +36,8 @@ sd_bus* bus = nullptr;
 
 std::shared_ptr<sdbusplus::asio::connection> sdbusp;
 
+std::shared_ptr<sdbusplus::asio::object_server> objServer;
+
 /*
  * @brief Required by apphandler IPMI Provider Library
  */
@@ -50,6 +53,15 @@ std::shared_ptr<sdbusplus::asio::connection> getSdBus()
 {
     return sdbusp;
 }
+
+/*
+ * @brief mechanism to get at sdbusplus object_server
+ */
+std::shared_ptr<sdbusplus::asio::object_server> getObjServer()
+{
+    return objServer;
+}
+
 
 static EInterfaceIndex currentInterfaceIndex = interfaceUnknown;
 static void setInterfaceIndex(const std::string& channel)
@@ -117,6 +129,10 @@ int main(int argc, char* argv[])
     {
         return EXIT_FAILURE;
     }
+
+    auto& ipHeader = ipheader::IPHeader::get();
+
+    ipHeader.IPHeaderInit(channel);
 
     // Start Event Loop
     return loop.startEventLoop();

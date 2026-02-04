@@ -90,6 +90,8 @@ class EventLoop
     /** @brief set up boost::asio signal handling */
     void setupSignal();
 
+    int updateSocket(std::string inetFamily);
+
   private:
     /** @brief async handler for incoming udp packets */
     void handleRmcpPacket();
