@@ -47,6 +47,18 @@ std::vector<uint8_t> openSession(
         return outPayload;
     }
 
+    uint8_t cipherPrivLimit = 0;
+    uint8_t cipherId = 0;
+
+    uint8_t chNum = static_cast<uint8_t>(getInterfaceIndex());
+    cipherPrivLimit = static_cast<uint8_t>(getCipherPrivilegeLimit(chNum, cipherId));
+
+    if (cipherPrivLimit == 0)
+    {
+	response->status_code = static_cast<uint8_t>(RAKP_ReturnCode::INSUFFICIENT_RESOURCES_ROLE);
+	return outPayload;
+    }
+
     session::Privilege priv;
 
     // 0h in the requested maximum privilege role field indicates highest level
@@ -56,11 +68,19 @@ std::vector<uint8_t> openSession(
     // permitted privilege level.
     if (!request->maxPrivLevel)
     {
-        priv = session::Privilege::ADMIN;
+        priv = static_cast<session::Privilege>(cipherPrivLimit);
     }
     else
     {
-        priv = static_cast<session::Privilege>(request->maxPrivLevel);
+	if (request->maxPrivLevel <= cipherPrivLimit)
+	{
+            priv = static_cast<session::Privilege>(request->maxPrivLevel);
+	}
+	else
+	{
+            response->status_code = static_cast<uint8_t>(RAKP_ReturnCode::UNAUTH_ROLE_PRIV);
+	    return outPayload;
+	}
     }
 
     // Check for valid Confidentiality Algorithms

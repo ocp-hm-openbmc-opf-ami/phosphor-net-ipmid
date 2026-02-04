@@ -11,6 +11,8 @@
 
 #include <chrono>
 
+#include "open_session.hpp"
+
 using namespace std::chrono_literals;
 
 namespace command
@@ -52,6 +54,18 @@ std::vector<uint8_t> setSessionPrivilegeLevel(
     {
         response->completionCode = IPMI_CC_INVALID_FIELD_REQUEST;
         return outPayload;
+    }
+
+    uint8_t cipherId = 0;
+    uint8_t chNum = static_cast<uint8_t>(getInterfaceIndex());
+
+    uint8_t cipherPrivLimit = static_cast<uint8_t>(getCipherPrivilegeLimit(chNum, cipherId));
+
+    if (reqPrivilegeLevel > cipherPrivLimit)
+    {
+	// Requested level exceeds Cpher Privilege Limit
+	response->completionCode = IPMI_CC_EXCEEDS_USER_PRIV;
+	return outPayload;
     }
 
     if (reqPrivilegeLevel > (static_cast<uint8_t>(session->reqMaxPrivLevel) &

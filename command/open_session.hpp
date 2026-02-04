@@ -4,6 +4,10 @@
 
 #include <vector>
 
+#include <user_channel/channel_mgmt.hpp>
+
+#include <fstream>
+
 namespace command
 {
 
@@ -158,6 +162,50 @@ struct OpenSessionResponse
     uint8_t reserved13;
     uint16_t reserved14;
 } __attribute__((packed));
+
+/** @brief Get Cipher privilege from Json
+ *
+ *  @param[in] chNum - Channal Number
+ *
+ *  @param[in] cipherId - Cipher ID
+ *
+ *  @return Cipher privilege value
+ */
+inline uint8_t getCipherPrivilegeLimit(const uint8_t& chNum, const uint8_t cipherId)
+{
+    (void)cipherId;  
+    uint8_t cipherPrivLimit = 4;
+
+    std::string channelKey = "Channel" + std::to_string(chNum);
+    std::ifstream jsonFile("/var/lib/ipmi/cs_privilege_levels.json");
+
+    if (!jsonFile.is_open())
+    {
+       // return admin privilege since cipher privilege is not set
+       return cipherPrivLimit;
+    }
+    else
+    {
+       using json = nlohmann::json;
+       json jsonData;
+       try
+       {
+	  jsonFile >> jsonData;
+       }
+       catch (const json::parse_error& e)
+       {
+	  std::cerr << "JSON parsing error: " << e.what() << std::endl;
+       }
+
+       jsonFile.close();
+       std::string cipherPrivStr = jsonData[channelKey]["CipherID0"];
+
+       ipmi::ChannelConfig channelConfig;
+       cipherPrivLimit = static_cast<uint8_t>(channelConfig.convertToPrivLimitIndex(cipherPrivStr));
+
+       return cipherPrivLimit;
+    }
+}
 
 /**
  * @brief RMCP+ Open Session Request, RMCP+ Open Session Response
