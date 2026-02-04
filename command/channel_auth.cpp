@@ -16,6 +16,12 @@
 #include <set>
 #include <string>
 
+#if BYTE_ORDER == LITTLE_ENDIAN
+#define RESERVED_BITS (BIT6 | BIT5 | BIT4)
+#endif
+#if BYTE_ORDER == BIG_ENDIAN
+#define RESERVED_BITS (BIT1 | BIT2 | BIT3)
+#endif
 namespace command
 {
 
@@ -33,6 +39,11 @@ std::vector<uint8_t> GetChannelCapabilities(
     {
         std::vector<uint8_t> errorPayload{IPMI_CC_REQ_DATA_LEN_INVALID};
         return errorPayload;
+    }
+    if( request->channelNumber & RESERVED_BITS )
+    {
+	    std::vector<uint8_t> errorPayload{IPMI_CC_INVALID_FIELD_REQUEST};
+	    return errorPayload;
     }
     constexpr unsigned int channelMask = 0x0f;
     uint8_t chNum = ipmi::convertCurrentChannelNum(

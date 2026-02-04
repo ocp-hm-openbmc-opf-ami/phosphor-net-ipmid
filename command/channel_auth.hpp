@@ -4,6 +4,13 @@
 
 #include <vector>
 
+#define BIT1    0x0002
+#define BIT2    0x0004
+#define BIT3    0x0008
+#define BIT4    0x0010
+#define BIT5    0x0020
+#define BIT6    0x0040
+#define BIT7    0x0080
 namespace command
 {
 
