@@ -208,7 +208,7 @@ std::vector<uint8_t> RAKP12(const std::vector<uint8_t>& inPayload,
     }
 #ifdef PAM_AUTHENTICATE
     // Check whether user is already locked for failed attempts
-    if (!ipmi::ipmiUserPamAuthenticate(userName, passwd))
+    if ( (ipmi::ipmiUserLockStatus(userName)) || (!ipmi::ipmiUserPamAuthenticate(userName, passwd)))
     {
         lg2::error(
             "Authentication failed - user already locked out, user id: {ID}",
