@@ -1,0 +1,10 @@
+[Unit]
+ConditionPathExists=/sys/class/net/%i
+
+[Socket]
+ListenDatagram=623
+BindToDevice=%i
+
+[Install]
+WantedBy=sockets.target
+
