@@ -48,8 +48,9 @@ void Handler::updSessionData(std::shared_ptr<Message>& inMessage)
     session->channelPtr = channel;
     session->remotePort(channel->getPort());
     uint32_t ipAddr = 0;
-    channel->getRemoteAddress(ipAddr);
+    std::string _ip = channel->getRemoteAddress(ipAddr);
     session->remoteIPAddr(ipAddr);
+    session->remoteMACAddress(channel->getRemoteMac(_ip));
 }
 
 Handler::~Handler()

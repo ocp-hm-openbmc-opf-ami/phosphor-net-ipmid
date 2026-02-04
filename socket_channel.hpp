@@ -5,7 +5,9 @@
 
 #include <boost/asio/ip/udp.hpp>
 #include <phosphor-logging/lg2.hpp>
+#include <phosphor-logging/log.hpp>
 
+#include <fstream>
 #include <memory>
 #include <optional>
 #include <string>
@@ -101,6 +103,72 @@ class Channel
         }
         lg2::error("Error in inet_ntop: {ERROR}", "ERROR", strerror(errno));
         return std::string();
+    }
+
+    std::map<std::string, std::string>
+        loadIpToMacMapping(const std::string& filename)
+    {
+        using namespace phosphor::logging;
+        std::map<std::string, std::string> ipToMac;
+        std::ifstream file(filename);
+        std::string line, msg;
+
+        if (!file.is_open())
+        {
+            msg = "Can not open file " + filename;
+            log<level::INFO>(msg.c_str());
+            return ipToMac;
+        }
+
+        while (getline(file, line))
+        {
+            std::istringstream iss(line);
+            std::string ip, dummy, mac;
+            iss >> ip >> dummy >> dummy >> mac;
+            ipToMac[ip] = mac;
+        }
+
+        file.close();
+        return ipToMac;
+    }
+
+    std::vector<uint8_t> getRemoteMac(std::string remoteIpv4Addr)
+    {
+        using namespace phosphor::logging;
+        std::vector<uint8_t> retMacAddr(6, 0);
+        const std::string arpFile = "/proc/net/arp";
+        std::string ip, msg, mac, item;
+        auto ipToMac = loadIpToMacMapping(arpFile);
+
+        // remoteIpv4Addr will be like ::ffff:192.168.56.105
+        size_t pos = remoteIpv4Addr.rfind(':');
+        if (pos != std::string::npos)
+        {
+            ip = remoteIpv4Addr.substr(pos + 1);
+        }
+
+        if (ipToMac.find(ip) != ipToMac.end())
+        {
+            mac = ipToMac.at(ip);
+        }
+        else
+        {
+            /*Due to the restrictions of the subnet partition,
+            it might not be possible to retrieve the corresponding IP's MAC
+            address. */
+            return retMacAddr;
+        }
+
+        std::stringstream ss(mac);
+        retMacAddr.clear();
+        while (getline(ss, item, ':'))
+        {
+            unsigned int value;
+            std::stringstream converter(item);
+            converter >> std::hex >> value;
+            retMacAddr.push_back(static_cast<uint8_t>(value));
+        }
+        return retMacAddr;
     }
 
     /**
