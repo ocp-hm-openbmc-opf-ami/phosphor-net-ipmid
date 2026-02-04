@@ -443,14 +443,14 @@ std::vector<uint8_t> flatten(uint8_t asfMsgTag)
 
     // No OEM-specific capabilities exist, therefore the second
     // IANA Enterprise Number contains the same IANA(4542)
-    header->ping.iana = header->iana = endian::to_ipmi(parser::ASF_IANA);
+    header->ping.iana = header->iana = endian::to_network(parser::ASF_IANA);
     header->ping.msgType = static_cast<uint8_t>(RmcpMsgType::PONG);
     header->ping.msgTag = asfMsgTag;
     header->ping.reserved = 0x00;
     header->ping.dataLen =
         parser::RMCP_ASF_PONG_DATA_LEN; // as per spec 13.2.4,
 
-    header->iana = parser::ASF_IANA;
+    header->iana = endian::to_network(parser::ASF_IANA);
     header->oemDefined = 0x00;
     header->suppEntities = parser::ASF_SUPP_ENT;
     header->suppInteract = parser::ASF_SUPP_INT;

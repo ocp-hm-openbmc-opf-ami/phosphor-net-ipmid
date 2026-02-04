@@ -7,6 +7,7 @@
 #include <numeric>
 #include <vector>
 
+#define RMCP_PING
 namespace message
 {
 
