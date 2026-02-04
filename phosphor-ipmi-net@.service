@@ -3,6 +3,8 @@ Description=Network IPMI daemon
 After=phosphor-ipmi-host.service
 Requires=sys-subsystem-net-devices-%i.device
 After=sys-subsystem-net-devices-%i.device
+Requires=xyz.openbmc_project.Network.service
+After=xyz.openbmc_project.Network.service
 PartOf=phosphor-ipmi-warm-reset.target
 ConditionPathExists=/sys/class/net/%i
 
