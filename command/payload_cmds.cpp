@@ -8,6 +8,7 @@
 
 #include <ipmid/api-types.hpp>
 #include <phosphor-logging/lg2.hpp>
+#include <phosphor-logging/log.hpp>
 
 namespace sol
 {
@@ -15,6 +16,7 @@ namespace sol
 namespace command
 {
 
+using namespace phosphor::logging;
 std::vector<uint8_t> activatePayload(const std::vector<uint8_t>& inPayload,
                                      std::shared_ptr<message::Handler>& handler)
 {
@@ -39,8 +41,18 @@ std::vector<uint8_t> activatePayload(const std::vector<uint8_t>& inPayload,
         return outPayload;
     }
 
-    sol::Manager::get().updateSOLParameter(ipmi::convertCurrentChannelNum(
-        ipmi::currentChNum, getInterfaceIndex()));
+    try
+    {
+        sol::Manager::get().updateSOLParameter(ipmi::convertCurrentChannelNum(
+           ipmi::currentChNum, getInterfaceIndex()));
+    }
+    catch (const std::exception& e)
+    {
+        log<level::ERR>(e.what());
+        response->completionCode = IPMI_CC_UNSPECIFIED_ERROR;
+        return outPayload;
+    }
+
     if (!sol::Manager::get().enable)
     {
         response->completionCode = IPMI_CC_PAYLOAD_TYPE_DISABLED;
