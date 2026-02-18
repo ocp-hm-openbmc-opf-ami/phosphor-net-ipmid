@@ -12,7 +12,6 @@
 #include <boost/asio/write.hpp>
 #include <ipmid/utils.hpp>
 #include <phosphor-logging/lg2.hpp>
-#include <phosphor-logging/log.hpp>
 #include <sdbusplus/message/types.hpp>
 
 #include <chrono>
@@ -136,7 +135,7 @@ void Manager::updateSOLParameter(uint8_t channelNum)
         {
             solService.clear();
             lg2::error("Get SOL service failed: {ERROR}", "ERROR", e);
-            throw;
+            return;
         }
     }
     try
@@ -147,42 +146,30 @@ void Manager::updateSOLParameter(uint8_t channelNum)
     catch (const std::runtime_error& e)
     {
         lg2::error("Setting sol parameter: {ERROR}", "ERROR", e);
-        throw;
+        return;
     }
 
-    try
-    {
-        progress =
-            static_cast<uint8_t>(std::get<uint64_t>(properties["Progress"]));
+    progress = std::get<uint8_t>(properties["Progress"]);
 
-        enable = std::get<bool>(properties["Enable"]);
+    enable = std::get<bool>(properties["Enable"]);
 
-        forceEncrypt = std::get<bool>(properties["ForceEncryption"]);
+    forceEncrypt = std::get<bool>(properties["ForceEncryption"]);
 
-        forceAuth = std::get<bool>(properties["ForceAuthentication"]);
+    forceAuth = std::get<bool>(properties["ForceAuthentication"]);
 
-        solMinPrivilege = static_cast<session::Privilege>(
-              std::get<uint64_t>(properties["Privilege"]));
+    solMinPrivilege = static_cast<session::Privilege>(
+        std::get<uint8_t>(properties["Privilege"]));
 
-        accumulateInterval = static_cast<uint8_t>(std::get<uint64_t>(
-                                   (properties["AccumulateIntervalMS"]))) *
-                               sol::accIntervalFactor * 1ms;
-        sendThreshold =
-              static_cast<uint8_t>(std::get<uint64_t>(properties["Threshold"]));
+    accumulateInterval =
+        std::get<uint8_t>((properties["AccumulateIntervalMS"])) *
+        sol::accIntervalFactor * 1ms;
 
-        retryCount =
-              static_cast<uint8_t>(std::get<uint64_t>(properties["RetryCount"]));
+    sendThreshold = std::get<uint8_t>(properties["Threshold"]);
 
-        retryInterval = static_cast<uint8_t>(
-                              std::get<uint64_t>(properties["RetryIntervalMS"])) *
-                          sol::retryIntervalFactor * 1ms;
-    }
-    catch (const std::runtime_error&)
-    {
-        phosphor::logging::log<phosphor::logging::level::ERR>(
-            "Error getting sol parameter");
-        throw;
-    }
+    retryCount = std::get<uint8_t>(properties["RetryCount"]);
+
+    retryInterval = std::get<uint8_t>(properties["RetryIntervalMS"]) *
+                    sol::retryIntervalFactor * 1ms;
 
     return;
 }
@@ -290,7 +277,7 @@ void registerSOLServiceChangeCallback()
 
 void procSolConfChange(sdbusplus::message_t& msg)
 {
-    using SolConfVariant = std::variant<bool, uint64_t>;
+    using SolConfVariant = std::variant<bool, uint8_t>;
     using SolConfProperties =
         std::vector<std::pair<std::string, SolConfVariant>>;
 
@@ -312,8 +299,7 @@ void procSolConfChange(sdbusplus::message_t& msg)
     {
         if (prop.first == "Progress")
         {
-	    sol::Manager::get().progress =
-                static_cast<uint8_t>(std::get<uint64_t>(prop.second));
+            sol::Manager::get().progress = std::get<uint8_t>(prop.second);
         }
         else if (prop.first == "Enable")
         {
@@ -330,25 +316,25 @@ void procSolConfChange(sdbusplus::message_t& msg)
         else if (prop.first == "Privilege")
         {
             sol::Manager::get().solMinPrivilege =
-	    static_cast<session::Privilege>(std::get<uint64_t>(prop.second));
+                static_cast<session::Privilege>(std::get<uint8_t>(prop.second));
         }
         else if (prop.first == "AccumulateIntervalMS")
         {
             sol::Manager::get().accumulateInterval =
-		static_cast<uint8_t>(std::get<uint64_t>(prop.second)) * sol::accIntervalFactor * 1ms;
+                std::get<uint8_t>(prop.second) * sol::accIntervalFactor * 1ms;
         }
         else if (prop.first == "Threshold")
         {
-            sol::Manager::get().sendThreshold = static_cast<uint8_t>(std::get<uint64_t>(prop.second));
+            sol::Manager::get().sendThreshold = std::get<uint8_t>(prop.second);
         }
         else if (prop.first == "RetryCount")
         {
-            sol::Manager::get().retryCount = static_cast<uint8_t>(std::get<uint64_t>(prop.second));
+            sol::Manager::get().retryCount = std::get<uint8_t>(prop.second);
         }
         else if (prop.first == "RetryIntervalMS")
         {
             sol::Manager::get().retryInterval =
-                static_cast<uint8_t>(std::get<uint64_t>(prop.second)) * sol::retryIntervalFactor * 1ms;
+                std::get<uint8_t>(prop.second) * sol::retryIntervalFactor * 1ms;
         }
     }
 }
