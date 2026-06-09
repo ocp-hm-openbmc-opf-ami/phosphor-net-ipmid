@@ -95,7 +95,8 @@ std::vector<uint8_t> openSession(
     if (!isCipherSuiteConfigured(request->authAlgo, request->intAlgo,
                                  request->confAlgo))
     {
-        lg2::error("Cipher suite combination not configured, rejecting session");
+        lg2::error(
+            "Cipher suite combination not configured, rejecting session");
         response->status_code =
             static_cast<uint8_t>(RAKP_ReturnCode::INVALID_AUTH_ALGO);
         return outPayload;
@@ -105,12 +106,14 @@ std::vector<uint8_t> openSession(
     uint8_t cipherId = 0;
 
     uint8_t chNum = static_cast<uint8_t>(getInterfaceIndex());
-    cipherPrivLimit = static_cast<uint8_t>(getCipherPrivilegeLimit(chNum, cipherId));
+    cipherPrivLimit =
+        static_cast<uint8_t>(getCipherPrivilegeLimit(chNum, cipherId));
 
     if (cipherPrivLimit == 0)
     {
-	response->status_code = static_cast<uint8_t>(RAKP_ReturnCode::INSUFFICIENT_RESOURCES_ROLE);
-	return outPayload;
+        response->status_code =
+            static_cast<uint8_t>(RAKP_ReturnCode::INSUFFICIENT_RESOURCES_ROLE);
+        return outPayload;
     }
 
     session::Privilege priv;
@@ -126,15 +129,16 @@ std::vector<uint8_t> openSession(
     }
     else
     {
-	if (request->maxPrivLevel <= cipherPrivLimit)
-	{
+        if (request->maxPrivLevel <= cipherPrivLimit)
+        {
             priv = static_cast<session::Privilege>(request->maxPrivLevel);
-	}
-	else
-	{
-            response->status_code = static_cast<uint8_t>(RAKP_ReturnCode::UNAUTH_ROLE_PRIV);
-	    return outPayload;
-	}
+        }
+        else
+        {
+            response->status_code =
+                static_cast<uint8_t>(RAKP_ReturnCode::UNAUTH_ROLE_PRIV);
+            return outPayload;
+        }
     }
 
     // Check for valid Confidentiality Algorithms
