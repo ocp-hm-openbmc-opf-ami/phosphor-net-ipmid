@@ -4,10 +4,54 @@
 #include "endian.hpp"
 #include "sessions_manager.hpp"
 
+#include <nlohmann/json.hpp>
 #include <phosphor-logging/lg2.hpp>
+
+#include <fstream>
 
 namespace command
 {
+
+static constexpr const char* cipherListFile =
+    "/usr/share/ipmi-providers/cipher_list.json";
+
+/** @brief Check if the requested algorithm combination matches any configured
+ *         cipher suite in cipher_list.json.
+ *
+ *  @param[in] authAlgo  - requested authentication algorithm
+ *  @param[in] intAlgo   - requested integrity algorithm
+ *  @param[in] confAlgo  - requested confidentiality algorithm
+ *
+ *  @return true if combination is listed, false otherwise
+ */
+static bool isCipherSuiteConfigured(uint8_t authAlgo, uint8_t intAlgo,
+                                    uint8_t confAlgo)
+{
+    std::ifstream jsonFile(cipherListFile);
+    if (!jsonFile.is_open())
+    {
+        lg2::error("Cipher list file not found, rejecting session");
+        return false;
+    }
+
+    auto data = nlohmann::json::parse(jsonFile, nullptr, false);
+    if (data.is_discarded())
+    {
+        lg2::error("Failed to parse cipher list JSON, rejecting session");
+        return false;
+    }
+
+    for (const auto& record : data)
+    {
+        if (record.value("authentication", 0) == authAlgo &&
+            record.value("integrity", 0) == intAlgo &&
+            record.value("confidentiality", 0) == confAlgo)
+        {
+            return true;
+        }
+    }
+    return false;
+}
 
 std::vector<uint8_t> openSession(
     const std::vector<uint8_t>& inPayload,
@@ -44,6 +88,16 @@ std::vector<uint8_t> openSession(
     {
         response->status_code =
             static_cast<uint8_t>(RAKP_ReturnCode::INVALID_INTEGRITY_ALGO);
+        return outPayload;
+    }
+
+    // Check if the algorithm combination matches a configured cipher suite
+    if (!isCipherSuiteConfigured(request->authAlgo, request->intAlgo,
+                                 request->confAlgo))
+    {
+        lg2::error("Cipher suite combination not configured, rejecting session");
+        response->status_code =
+            static_cast<uint8_t>(RAKP_ReturnCode::INVALID_AUTH_ALGO);
         return outPayload;
     }
 
