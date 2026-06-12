@@ -8,6 +8,7 @@
 #include <phosphor-logging/lg2.hpp>
 
 #include <fstream>
+#include <mutex>
 
 namespace command
 {
@@ -15,42 +16,64 @@ namespace command
 static constexpr const char* cipherListFile =
     "/usr/share/ipmi-providers/cipher_list.json";
 
-/** @brief Check if the requested algorithm combination matches any configured
- *         cipher suite in cipher_list.json.
+static constexpr int invalidCipherId = -1;
+
+static nlohmann::json cachedCipherList;
+static bool loaded = false;
+static std::once_flag cipherListLoadFlag;
+
+static bool loadOnce()
+{
+    std::ifstream jsonFile(cipherListFile);
+    if (!jsonFile.is_open())
+    {
+        lg2::error("Cipher list file not found");
+        return false;
+    }
+
+    cachedCipherList = nlohmann::json::parse(jsonFile, nullptr, false);
+    if (cachedCipherList.is_discarded())
+    {
+        lg2::error("Failed to parse cipher list JSON");
+        return false;
+    }
+
+    return true;
+}
+
+/** @brief Get cipher suite ID for the requested algorithm combination from
+ *         cipher_list.json.
  *
  *  @param[in] authAlgo  - requested authentication algorithm
  *  @param[in] intAlgo   - requested integrity algorithm
  *  @param[in] confAlgo  - requested confidentiality algorithm
  *
- *  @return true if combination is listed, false otherwise
+ *  @return cipher suite ID if combination is configured, invalidCipherId
+ *          otherwise
  */
-static bool isCipherSuiteConfigured(uint8_t authAlgo, uint8_t intAlgo,
-                                    uint8_t confAlgo)
+static int getCipherIdFromConfig(uint8_t authAlgo, uint8_t intAlgo,
+                                 uint8_t confAlgo)
 {
-    std::ifstream jsonFile(cipherListFile);
-    if (!jsonFile.is_open())
+    if (!loaded)
     {
-        lg2::error("Cipher list file not found, rejecting session");
-        return false;
+        std::call_once(cipherListLoadFlag, [&]() { loaded = loadOnce(); });
+        if (!loaded)
+        {
+            lg2::error("Cipher list unavailable, rejecting session");
+            return invalidCipherId;
+        }
     }
 
-    auto data = nlohmann::json::parse(jsonFile, nullptr, false);
-    if (data.is_discarded())
-    {
-        lg2::error("Failed to parse cipher list JSON, rejecting session");
-        return false;
-    }
-
-    for (const auto& record : data)
+    for (const auto& record : cachedCipherList)
     {
         if (record.value("authentication", 0) == authAlgo &&
             record.value("integrity", 0) == intAlgo &&
             record.value("confidentiality", 0) == confAlgo)
         {
-            return true;
+            return record.value("cipher", invalidCipherId);
         }
     }
-    return false;
+    return invalidCipherId;
 }
 
 std::vector<uint8_t> openSession(
@@ -91,19 +114,20 @@ std::vector<uint8_t> openSession(
         return outPayload;
     }
 
-    // Check if the algorithm combination matches a configured cipher suite
-    if (!isCipherSuiteConfigured(request->authAlgo, request->intAlgo,
-                                 request->confAlgo))
+    int resolvedCipherId = getCipherIdFromConfig(request->authAlgo,
+                                                 request->intAlgo,
+                                                 request->confAlgo);
+    if (resolvedCipherId == invalidCipherId)
     {
         lg2::error(
             "Cipher suite combination not configured, rejecting session");
         response->status_code =
-            static_cast<uint8_t>(RAKP_ReturnCode::INVALID_AUTH_ALGO);
+            static_cast<uint8_t>(RAKP_ReturnCode::NO_CIPHER_SUITE_MATCH);
         return outPayload;
     }
 
     uint8_t cipherPrivLimit = 0;
-    uint8_t cipherId = 0;
+    uint8_t cipherId = static_cast<uint8_t>(resolvedCipherId);
 
     uint8_t chNum = static_cast<uint8_t>(getInterfaceIndex());
     cipherPrivLimit =
