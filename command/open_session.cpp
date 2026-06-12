@@ -114,9 +114,8 @@ std::vector<uint8_t> openSession(
         return outPayload;
     }
 
-    int resolvedCipherId = getCipherIdFromConfig(request->authAlgo,
-                                                 request->intAlgo,
-                                                 request->confAlgo);
+    int resolvedCipherId = getCipherIdFromConfig(
+        request->authAlgo, request->intAlgo, request->confAlgo);
     if (resolvedCipherId == invalidCipherId)
     {
         lg2::error(
