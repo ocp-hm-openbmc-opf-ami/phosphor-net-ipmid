@@ -8,6 +8,8 @@
 
 #include <memory>
 
+static constexpr bool debug = false;
+
 namespace message
 {
 

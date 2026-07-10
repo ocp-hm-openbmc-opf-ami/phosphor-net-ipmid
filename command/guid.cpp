@@ -87,7 +87,11 @@ const Guid& getSystemGUID()
     }
     catch (const sdbusplus::exception_t& e)
     {
-        lg2::error("Failed in reading BMC UUID property: {ERROR}", "ERROR", e);
+        if (debug)
+        {
+            lg2::error("Failed in reading BMC UUID property: {ERROR}", "ERROR",
+                       e);
+        }
         return fakeGuid;
     }
 
@@ -101,8 +105,11 @@ const Guid& getSystemGUID()
     }
     catch (const InvalidArgument& e)
     {
-        lg2::error("Failed in parsing BMC UUID property: {VALUE}", "VALUE",
-                   rfc4122Uuid.c_str());
+        if (debug)
+        {
+            lg2::error("Failed in parsing BMC UUID property: {VALUE}", "VALUE",
+                       rfc4122Uuid.c_str());
+        }
         return fakeGuid;
     }
     return guid.value();
@@ -137,15 +144,21 @@ void registerGUIDChangeCallback()
                     catch (const std::exception& e)
                     {
                         // signal contained invalid guid; ignore it
-                        lg2::error(
-                            "Failed to parse propertiesChanged signal: {ERROR}",
-                            "ERROR", e);
+                        if (debug)
+                        {
+                            lg2::error(
+                                "Failed to parse propertiesChanged signal: {ERROR}",
+                                "ERROR", e);
+                        }
                     }
                 });
         }
         catch (const std::exception& e)
         {
-            lg2::error("Failed to create dbus match: {ERROR}", "ERROR", e);
+            if (debug)
+            {
+                lg2::error("Failed to create dbus match: {ERROR}", "ERROR", e);
+            }
         }
     }
 }
