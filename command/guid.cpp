@@ -22,7 +22,10 @@ std::unique_ptr<sdbusplus::bus::match_t> matchPtr(nullptr);
 
 static constexpr auto propInterface = "xyz.openbmc_project.Common.UUID";
 static constexpr auto uuidProperty = "UUID";
-static constexpr auto subtreePath = "/xyz/openbmc_project/inventory";
+// Search the whole object tree: the UUID interface is may not published under
+// /xyz/openbmc_project/inventory, and during early boot its providing object
+// may appear late. Using "/" lets the mapper find it wherever/whenever it is.
+static constexpr auto subtreePath = "/";
 
 static void rfcToGuid(std::string rfc4122, Guid& uuid)
 {
@@ -92,7 +95,12 @@ const Guid& getSystemGUID()
             lg2::error("Failed in reading BMC UUID property: {ERROR}", "ERROR",
                        e);
         }
-        return fakeGuid;
+        // Cache the fallback so subsequent RAKP requests do not repeatedly
+        // block on the (currently unavailable) UUID lookup during early boot.
+        // registerGUIDChangeCallback() refreshes this once the real UUID is
+        // published via a propertiesChanged signal.
+        guid = fakeGuid;
+        return guid.value();
     }
 
     std::string rfc4122Uuid = std::get<std::string>(propValue);
@@ -110,7 +118,8 @@ const Guid& getSystemGUID()
             lg2::error("Failed in parsing BMC UUID property: {VALUE}", "VALUE",
                        rfc4122Uuid.c_str());
         }
-        return fakeGuid;
+        guid = fakeGuid;
+        return guid.value();
     }
     return guid.value();
 }
