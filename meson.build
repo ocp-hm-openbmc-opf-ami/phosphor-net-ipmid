@@ -18,14 +18,25 @@ conf_data.set('PAM_AUTHENTICATE', get_option('pam_authenticate').allowed())
 
 configure_file(output: 'config.h', configuration: conf_data)
 
-sdbusplus_dep = dependency('sdbusplus')
-phosphor_dbus_interfaces_dep = dependency('phosphor-dbus-interfaces')
-phosphor_logging_dep = dependency('phosphor-logging')
 libsystemd_dep = dependency('libsystemd')
 libcrypto_dep = dependency('libcrypto')
-ipmid_dep = dependency('libipmid')
-userlayer_dep = dependency('libuserlayer')
-channellayer_dep = dependency('libchannellayer')
+if get_option('tests').enabled()
+    _host_ipmid_sp = subproject('phosphor-host-ipmid', default_options: ['tests=enabled'])
+    ipmid_dep = _host_ipmid_sp.get_variable('ipmid_dep')
+    userlayer_dep = _host_ipmid_sp.get_variable('userlayer_dep')
+    channellayer_dep = _host_ipmid_sp.get_variable('channellayer_dep')
+    phosphor_logging_dep = subproject('phosphor-logging').get_variable('phosphor_logging_dep')
+    # phosphor-host-ipmid overrides these via meson.override_dependency
+    sdbusplus_dep = dependency('sdbusplus')
+    phosphor_dbus_interfaces_dep = dependency('phosphor-dbus-interfaces')
+else
+    sdbusplus_dep = dependency('sdbusplus')
+    phosphor_dbus_interfaces_dep = dependency('phosphor-dbus-interfaces')
+    phosphor_logging_dep = dependency('phosphor-logging')
+    ipmid_dep = dependency('libipmid')
+    userlayer_dep = dependency('libuserlayer')
+    channellayer_dep = dependency('libchannellayer')
+endif
 
 # Project Arguments
 cpp = meson.get_compiler('cpp')
