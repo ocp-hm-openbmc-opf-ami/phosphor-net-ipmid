@@ -40,10 +40,10 @@ std::vector<uint8_t> GetChannelCapabilities(
         std::vector<uint8_t> errorPayload{IPMI_CC_REQ_DATA_LEN_INVALID};
         return errorPayload;
     }
-    if( request->channelNumber & RESERVED_BITS )
+    if (request->channelNumber & RESERVED_BITS)
     {
-	    std::vector<uint8_t> errorPayload{IPMI_CC_INVALID_FIELD_REQUEST};
-	    return errorPayload;
+        std::vector<uint8_t> errorPayload{IPMI_CC_INVALID_FIELD_REQUEST};
+        return errorPayload;
     }
     constexpr unsigned int channelMask = 0x0f;
     uint8_t chNum = ipmi::convertCurrentChannelNum(
@@ -76,7 +76,7 @@ std::vector<uint8_t> GetChannelCapabilities(
     response->md2 = 0;
 
     response->reserved3 = 0;
-    response->KGStatus = 0;       // KG is set to default
+    response->KGStatus = 0; // KG is set to default
     std::string chsecuritykeys = ipmi::ipmiGetChannelSecurityKeys(ipmi::ID_KG);
     if (!chsecuritykeys.empty())
         response->KGStatus = 1;
@@ -249,8 +249,12 @@ std::vector<uint8_t> getChannelCipherSuites(
     }
     if (!ipmi::isValidPayloadType(static_cast<ipmi::PayloadType>(payloadType)))
     {
-        lg2::debug("Get channel cipher suites - Invalid payload type: {ERROR}",
-                   "ERROR", strerror(errno));
+        if (debug)
+        {
+            lg2::debug(
+                "Get channel cipher suites - Invalid payload type: {ERROR}",
+                "ERROR", strerror(errno));
+        }
         constexpr uint8_t ccPayloadTypeNotSupported = 0x80;
         return errorResponse(ccPayloadTypeNotSupported);
     }
@@ -277,8 +281,12 @@ std::vector<uint8_t> getChannelCipherSuites(
          ipmi::EChannelSessSupported::none) ||
         !(ipmi::doesDeviceExist(rspChannel)))
     {
-        lg2::debug("Get channel cipher suites - Device does not exist:{ERROR}",
-                   "ERROR", strerror(errno));
+        if (debug)
+        {
+            lg2::debug(
+                "Get channel cipher suites - Device does not exist:{ERROR}",
+                "ERROR", strerror(errno));
+        }
         return errorResponse(IPMI_CC_INVALID_FIELD_REQUEST);
     }
 

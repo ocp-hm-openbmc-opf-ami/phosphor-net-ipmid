@@ -21,8 +21,11 @@ void Table::registerCommand(CommandID inCommand, std::unique_ptr<Entry>&& entry)
 
     if (command)
     {
-        lg2::debug("Already Registered: {COMMAND}", "COMMAND",
-                   inCommand.command);
+        if (debug)
+        {
+            lg2::debug("Already Registered: {COMMAND}", "COMMAND",
+                       inCommand.command);
+        }
         return;
     }
 

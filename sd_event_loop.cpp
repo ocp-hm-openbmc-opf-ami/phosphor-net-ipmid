@@ -1,8 +1,8 @@
 #include "sd_event_loop.hpp"
 
+#include "ipheader.hpp"
 #include "main.hpp"
 #include "message_handler.hpp"
-#include "ipheader.hpp"
 
 #include <error.h>
 #include <netinet/in.h>
@@ -157,7 +157,10 @@ int EventLoop::setupSocket(std::shared_ptr<sdbusplus::asio::connection>& bus,
         if (vlanid)
         {
             iface = iface + "." + std::to_string(vlanid);
-            lg2::debug("This channel has VLAN id: {VLAN}", "VLAN", vlanid);
+            if (debug)
+            {
+                lg2::debug("This channel has VLAN id: {VLAN}", "VLAN", vlanid);
+            }
         }
     }
     // Create our own socket if SysD did not supply one.
@@ -181,12 +184,13 @@ int EventLoop::setupSocket(std::shared_ptr<sdbusplus::asio::connection>& bus,
         udpSocket = std::make_shared<boost::asio::ip::udp::socket>(
             *io, boost::asio::ip::udp::v6(), openFd);
 #else
-       udpSocket = std::make_shared<boost::asio::ip::udp::socket>(*io, boost::asio::ip::udp::v4());
-       boost::asio::ip::udp::endpoint ep(boost::asio::ip::udp::v4(), reqPort);
-       udpSocket->set_option(boost::asio::ip::udp::socket::reuse_address(true));
-       udpSocket->bind(ep);
+        udpSocket = std::make_shared<boost::asio::ip::udp::socket>(
+            *io, boost::asio::ip::udp::v4());
+        boost::asio::ip::udp::endpoint ep(boost::asio::ip::udp::v4(), reqPort);
+        udpSocket->set_option(
+            boost::asio::ip::udp::socket::reuse_address(true));
+        udpSocket->bind(ep);
 #endif
-
     }
     else
     {
@@ -274,52 +278,49 @@ void EventLoop::setupSignal()
 
 int EventLoop::updateSocket(std::string inetFamily)
 {
-   auto& ipHeader = ipheader::IPHeader::get();
+    auto& ipHeader = ipheader::IPHeader::get();
 
-   if(inetFamily.compare("IPv4") == 0)
-   {
-        if(::setsockopt(udpSocket->native_handle(), IPPROTO_IP, IP_TTL,
-                     &ipHeader.timeToLive, sizeof(uint8_t)) == -1)
+    if (inetFamily.compare("IPv4") == 0)
+    {
+        if (::setsockopt(udpSocket->native_handle(), IPPROTO_IP, IP_TTL,
+                         &ipHeader.timeToLive, sizeof(uint8_t)) == -1)
         {
-	    return -1;
-	}
+            return -1;
+        }
 
         uint8_t flag = (ipHeader.flag >> 5);
 
-        if(::setsockopt(udpSocket->native_handle(), IPPROTO_IP, IP_MTU_DISCOVER,
-                    &flag, sizeof(flag)) == -1)
+        if (::setsockopt(udpSocket->native_handle(), IPPROTO_IP,
+                         IP_MTU_DISCOVER, &flag, sizeof(flag)) == -1)
         {
-	    return -1;
-	}
+            return -1;
+        }
 
-        if(::setsockopt(udpSocket->native_handle(), IPPROTO_IP, IP_TOS,
-                    &ipHeader.typeOfService, sizeof(uint8_t)) == -1)
+        if (::setsockopt(udpSocket->native_handle(), IPPROTO_IP, IP_TOS,
+                         &ipHeader.typeOfService, sizeof(uint8_t)) == -1)
         {
-	    return -1;
-	}
-   }
-   else if(inetFamily.compare("IPv6") == 0)
-   {
-	uint32_t trafficClass = static_cast<uint32_t>(ipHeader.trafficClass);
-	uint32_t hopLimit = static_cast<uint32_t>(ipHeader.hopLimit);
+            return -1;
+        }
+    }
+    else if (inetFamily.compare("IPv6") == 0)
+    {
+        uint32_t trafficClass = static_cast<uint32_t>(ipHeader.trafficClass);
+        uint32_t hopLimit = static_cast<uint32_t>(ipHeader.hopLimit);
 
-        if(::setsockopt(udpSocket->native_handle(), IPPROTO_IPV6, IPV6_TCLASS,
-                    &trafficClass, sizeof(uint32_t)) == -1)
+        if (::setsockopt(udpSocket->native_handle(), IPPROTO_IPV6, IPV6_TCLASS,
+                         &trafficClass, sizeof(uint32_t)) == -1)
         {
-	    return -1;
-	}
+            return -1;
+        }
 
-        if(::setsockopt(udpSocket->native_handle(), IPPROTO_IPV6, IPV6_UNICAST_HOPS,
-                    &hopLimit, sizeof(uint32_t)) == -1)
+        if (::setsockopt(udpSocket->native_handle(), IPPROTO_IPV6,
+                         IPV6_UNICAST_HOPS, &hopLimit, sizeof(uint32_t)) == -1)
         {
-	    return -1;
-	}
+            return -1;
+        }
+    }
 
-   }
-
-   return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }
-
-
 
 } // namespace eventloop
