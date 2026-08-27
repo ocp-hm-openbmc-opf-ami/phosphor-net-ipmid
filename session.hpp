@@ -61,6 +61,10 @@ constexpr uint8_t reqMaxPrivMask = 0xF;
  */
 struct SequenceNumbers
 {
+    static constexpr uint32_t windowSize = 32;
+    static_assert(windowSize <= 32,
+                  "windowSize must not exceed replayWindow bit width");
+
     auto get(bool inbound = true) const
     {
         return inbound ? in : out;
@@ -76,9 +80,61 @@ struct SequenceNumbers
         return ++out;
     }
 
+    // IPMI 2.0 sliding-window replay check (RFC 2401-style).
+    // Returns true if seqNum is acceptable, false if replayed or out of range.
+    // Uses a signed delta so comparisons stay correct across the spec-mandated
+    // 0xFFFFFFFF -> 1 sequence number wraparound.
+    bool isValid(uint32_t seqNum)
+    {
+        if (seqNum == 0)
+        {
+            return false;
+        }
+
+        if (in == 0)
+        {
+            in = seqNum;
+            replayWindow = 1;
+            return true;
+        }
+
+        int32_t delta = static_cast<int32_t>(seqNum - in);
+        if (delta > 0)
+        {
+            uint32_t shift = static_cast<uint32_t>(delta);
+            if (shift >= windowSize)
+            {
+                replayWindow = 1;
+            }
+            else
+            {
+                replayWindow <<= shift;
+                replayWindow |= 1;
+            }
+            in = seqNum;
+            return true;
+        }
+
+        uint32_t diff = static_cast<uint32_t>(-delta);
+        if (diff >= windowSize)
+        {
+            return false;
+        }
+
+        uint32_t bit = 1U << diff;
+        if (replayWindow & bit)
+        {
+            return false;
+        }
+
+        replayWindow |= bit;
+        return true;
+    }
+
   private:
     uint32_t in = 0;
     uint32_t out = 0;
+    uint32_t replayWindow = 0;
 };
 /**
  * @class Session
