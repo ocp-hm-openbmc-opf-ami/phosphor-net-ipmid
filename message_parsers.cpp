@@ -226,6 +226,11 @@ std::shared_ptr<Message> unflatten(std::vector<uint8_t>& inPacket)
         {
             throw std::runtime_error("Packet Integrity check failed");
         }
+        if (sessionID != session::sessionZero &&
+            !session->sequenceNums.isValid(message->sessionSeqNum))
+        {
+            throw std::runtime_error("Session sequence number replay detected");
+        }
     }
 
     // Decrypt the payload if the payload is encrypted
