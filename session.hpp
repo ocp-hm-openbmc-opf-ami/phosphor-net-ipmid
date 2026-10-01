@@ -280,6 +280,11 @@ class Session : public SessionIface
     Privilege reqMaxPrivLevel;
 
     /**
+     * @brief Indicates whether RAKP1 succeeded for this RMCP+ session
+     */
+    bool rakp1Succeeded = false;
+
+    /**
      * @brief session's user & channel access details
      */
     ipmi::PrivAccess sessionUserPrivAccess{};

@@ -75,6 +75,8 @@ std::vector<uint8_t> RAKP12(const std::vector<uint8_t>& inPayload,
         return outPayload;
     }
 
+    session->rakp1Succeeded = false;
+
     auto rakp1Size =
         sizeof(RAKP1request) - (userNameMaxLen - request->user_name_len);
 
@@ -324,6 +326,7 @@ std::vector<uint8_t> RAKP12(const std::vector<uint8_t>& inPayload,
 
     // Insert the HMAC output into the payload
     outPayload.insert(outPayload.end(), output.begin(), output.end());
+    session->rakp1Succeeded = true;
     return outPayload;
 }
 
