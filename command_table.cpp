@@ -233,8 +233,19 @@ std::vector<uint8_t> NetIpmidEntry::executeCommand(
 {
     std::vector<uint8_t> errResponse;
 
+    // Allow Close Session so a client can cancel a setup-in-progress session
+    constexpr uint8_t closeSessionCmd = 0x3C;
+    bool isCloseSession =
+        command.netFn() == (static_cast<uint16_t>(NetFns::APP) >> 10) &&
+        command.cmd() == closeSessionCmd;
+
     // Check if the command qualifies to be run prior to establishing a session
-    if (!sessionless && (handler->sessionID == session::sessionZero))
+    if (!sessionless &&
+        ((handler->sessionID == session::sessionZero) ||
+         (!isCloseSession && static_cast<session::State>(
+                                 session::Manager::get()
+                                     .getSession(handler->sessionID)
+                                     ->state()) != session::State::active)))
     {
         errResponse.resize(1);
         errResponse[0] = IPMI_CC_INSUFFICIENT_PRIVILEGE;
