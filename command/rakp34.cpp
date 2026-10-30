@@ -103,6 +103,14 @@ std::vector<uint8_t> RAKP34(const std::vector<uint8_t>& inPayload,
         return outPayload;
     }
 
+    if (!session->rakp1Succeeded)
+    {
+        lg2::info("RAKP34: RAKP1 not completed for this session");
+        response->rmcpStatusCode =
+            static_cast<uint8_t>(RAKP_ReturnCode::INACTIVE_SESSIONID);
+        return outPayload;
+    }
+
     session->updateLastTransactionTime();
 
     auto authAlgo = session->getAuthAlgo();
