@@ -75,6 +75,17 @@ std::vector<uint8_t> RAKP12(const std::vector<uint8_t>& inPayload,
         return outPayload;
     }
 
+    if (static_cast<session::State>(session->state()) !=
+        session::State::setupInProgress)
+    {
+        lg2::info("RAKP12: session not in setup state");
+        response->rmcpStatusCode =
+            static_cast<uint8_t>(RAKP_ReturnCode::INVALID_SESSION_ID);
+        return outPayload;
+    }
+
+    session->rakp1Succeeded = false;
+
     auto rakp1Size =
         sizeof(RAKP1request) - (userNameMaxLen - request->user_name_len);
 
@@ -324,6 +335,7 @@ std::vector<uint8_t> RAKP12(const std::vector<uint8_t>& inPayload,
 
     // Insert the HMAC output into the payload
     outPayload.insert(outPayload.end(), output.begin(), output.end());
+    session->rakp1Succeeded = true;
     return outPayload;
 }
 
